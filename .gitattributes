@@ -1,4 +1,4 @@
-* text=auto
+* text=auto eol=lf
 *.cs text diff=csharp eol=lf
 *.meta text eol=lf
 *.unity text eol=lf
