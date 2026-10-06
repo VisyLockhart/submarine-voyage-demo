@@ -36,13 +36,12 @@ namespace SubmarineVoyage.Core
         public void Depart(Route route, DateTime nowUtc, double timeScale)
         {
             if (route == null) throw new ArgumentNullException(nameof(route));
-            if (timeScale <= 0) throw new ArgumentOutOfRangeException(nameof(timeScale));
             if (GetState(nowUtc) != SubmarineState.Idle)
                 throw new InvalidOperationException($"{Name} can only depart when idle.");
 
             // The return time is fixed at departure, so changing the time scale later
             // does not affect voyages already at sea.
-            var realDuration = TimeSpan.FromTicks((long)(route.GameDuration.Ticks / timeScale));
+            var realDuration = route.GetRealDuration(timeScale);
             CurrentRoute = route;
             DepartedAtUtc = nowUtc;
             ReturnAtUtc = nowUtc + realDuration;

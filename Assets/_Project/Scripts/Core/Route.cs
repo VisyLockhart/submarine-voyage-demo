@@ -35,5 +35,12 @@ namespace SubmarineVoyage.Core
             MinMaterials = minMaterials;
             MaxMaterials = maxMaterials;
         }
+
+        /// <param name="timeScale">Game seconds per real second (60 = 1 real second is 1 game minute).</param>
+        public TimeSpan GetRealDuration(double timeScale)
+        {
+            if (timeScale <= 0) throw new ArgumentOutOfRangeException(nameof(timeScale));
+            return TimeSpan.FromTicks((long)(GameDuration.Ticks / timeScale));
+        }
     }
 }

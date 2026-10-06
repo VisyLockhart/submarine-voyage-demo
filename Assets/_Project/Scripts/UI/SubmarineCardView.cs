@@ -38,7 +38,7 @@ namespace SubmarineVoyage.UI
                     break;
                 case SubmarineState.Voyaging:
                     stateText.text = $"Voyaging ({submarine.CurrentRoute.DisplayName})";
-                    countdownText.text = FormatRemaining(submarine.GetRemaining(nowUtc));
+                    countdownText.text = DurationFormat.Countdown(submarine.GetRemaining(nowUtc));
                     actionButtonLabel.text = "At sea";
                     actionButton.interactable = false;
                     break;
@@ -49,13 +49,6 @@ namespace SubmarineVoyage.UI
                     actionButton.interactable = true;
                     break;
             }
-        }
-
-        private static string FormatRemaining(TimeSpan remaining)
-        {
-            // Round up so the display never shows 00:00 while still at sea.
-            var seconds = (int)Math.Ceiling(remaining.TotalSeconds);
-            return $"{seconds / 60:00}:{seconds % 60:00}";
         }
     }
 }

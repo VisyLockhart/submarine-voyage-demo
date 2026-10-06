@@ -1,5 +1,7 @@
-using System;
+using System.Collections.Generic;
+using System.Linq;
 using SubmarineVoyage.Core;
+using SubmarineVoyage.Data;
 using TMPro;
 using UnityEngine;
 
@@ -7,12 +9,13 @@ namespace SubmarineVoyage.UI
 {
     /// <summary>
     /// Scene entry point: creates the core objects and connects them to the views.
-    /// Day-1 scope: one submarine, one route.
     /// </summary>
     public class HarborController : MonoBehaviour
     {
         [SerializeField] private SubmarineCardView card;
         [SerializeField] private TMP_Text walletText;
+        [SerializeField] private RouteSelectionView routeSelection;
+        [SerializeField] private RouteDefinition[] routes;
 
         [Tooltip("Game seconds per real second. 60 = 1 real second is 1 game minute.")]
         [SerializeField] private float timeScale = 60f;
@@ -21,7 +24,17 @@ namespace SubmarineVoyage.UI
         private readonly IRandomSource _random = new SystemRandomSource();
         private readonly Wallet _wallet = new Wallet();
         private readonly Submarine _submarine = new Submarine("Submarine 1");
-        private readonly Route _nearSea = new Route("near", "Near Sea", TimeSpan.FromMinutes(10), 50, 80, 0, 1);
+        private IReadOnlyList<Route> _routes;
+
+        private void Awake()
+        {
+            _routes = routes.Select(r => r.ToRoute()).ToList();
+        }
+
+        private void Start()
+        {
+            routeSelection.Hide();
+        }
 
         private void OnEnable() => card.ActionClicked += OnCardAction;
         private void OnDisable() => card.ActionClicked -= OnCardAction;
@@ -38,12 +51,21 @@ namespace SubmarineVoyage.UI
             switch (_submarine.GetState(now))
             {
                 case SubmarineState.Idle:
-                    _submarine.Depart(_nearSea, now, timeScale);
+                    routeSelection.Show(_routes, timeScale, Depart);
                     break;
                 case SubmarineState.ReadyToCollect:
                     _wallet.Add(_submarine.Collect(now, _random));
                     break;
             }
+            Refresh();
+        }
+
+        private void Depart(Route route)
+        {
+            // Re-check: the voyage starts when the route is picked, not when the dialog opened.
+            var now = _clock.UtcNow;
+            if (_submarine.GetState(now) != SubmarineState.Idle) return;
+            _submarine.Depart(route, now, timeScale);
             Refresh();
         }
 

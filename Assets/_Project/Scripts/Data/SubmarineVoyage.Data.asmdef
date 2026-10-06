@@ -1,11 +1,8 @@
 {
-    "name": "SubmarineVoyage.UI",
-    "rootNamespace": "SubmarineVoyage.UI",
+    "name": "SubmarineVoyage.Data",
+    "rootNamespace": "SubmarineVoyage.Data",
     "references": [
-        "SubmarineVoyage.Core",
-        "SubmarineVoyage.Data",
-        "UnityEngine.UI",
-        "Unity.TextMeshPro"
+        "SubmarineVoyage.Core"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

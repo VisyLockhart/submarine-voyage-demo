@@ -83,6 +83,30 @@ namespace SubmarineVoyage.Core.Tests
         }
     }
 
+    public class RouteTests
+    {
+        [Test]
+        public void GetRealDuration_SixHourRouteAt60x_IsSixMinutes()
+        {
+            var farSea = new Route("far", "Far Sea", TimeSpan.FromHours(6), 2000, 3000, 3, 6);
+            Assert.AreEqual(TimeSpan.FromMinutes(6), farSea.GetRealDuration(60));
+        }
+
+        [Test]
+        public void GetRealDuration_NonPositiveTimeScale_Throws()
+        {
+            var route = new Route("near", "Near Sea", TimeSpan.FromMinutes(10), 50, 80, 0, 1);
+            Assert.Throws<ArgumentOutOfRangeException>(() => route.GetRealDuration(0));
+        }
+
+        [Test]
+        public void Constructor_MaxBelowMin_Throws()
+        {
+            Assert.Throws<ArgumentOutOfRangeException>(
+                () => new Route("bad", "Bad", TimeSpan.FromMinutes(1), 80, 50, 0, 1));
+        }
+    }
+
     public class WalletTests
     {
         [Test]
