@@ -24,24 +24,76 @@ namespace SubmarineVoyage.UI
         [Tooltip("Game seconds per real second. 60 = 1 real second is 1 game minute.")]
         [SerializeField] private float timeScale = 60f;
 
-        [Tooltip("Gold at game start. Raise it temporarily to test unlocks and upgrades.")]
+        [Tooltip("Gold for a new game (no save file). Raise it temporarily to test unlocks and upgrades.")]
         [Min(0)] [SerializeField] private int startingGold;
 
         [Min(0)] [SerializeField] private int startingMaterials;
 
         private readonly IClock _clock = new SystemClock();
         private readonly IRandomSource _random = new SystemRandomSource();
+        // Created lazily: Unity forbids Application.persistentDataPath in field initializers.
+        private JsonSaveStore _saveStoreInstance;
+        private JsonSaveStore SaveStore => _saveStoreInstance ??= new JsonSaveStore();
         private Wallet _wallet;
-        private readonly Fleet _fleet = new Fleet();
+        private Fleet _fleet;
         private IReadOnlyList<Route> _routes;
 
         private void Awake()
         {
-            _wallet = new Wallet(startingGold, startingMaterials);
             _routes = routes.Select(r => r.ToRoute()).ToList();
+            LoadOrStartNew();
             if (cards.Length != _fleet.SlotCount)
                 Debug.LogError($"HarborController needs {_fleet.SlotCount} cards but has {cards.Length}.", this);
         }
+
+        private void LoadOrStartNew()
+        {
+            var data = SaveStore.Load();
+            if (data != null)
+            {
+                (_wallet, _fleet) = SaveMapper.Restore(data, _routes);
+            }
+            else
+            {
+                _wallet = new Wallet(startingGold, startingMaterials);
+                _fleet = new Fleet();
+            }
+        }
+
+        private void Save() => SaveStore.Save(SaveMapper.Capture(_wallet, _fleet));
+
+        // Mobile/WebGL may kill the app without OnApplicationQuit, so also save when paused.
+        private void OnApplicationPause(bool paused)
+        {
+            if (paused && _fleet != null) Save();
+        }
+
+        private void OnApplicationQuit()
+        {
+            if (_fleet != null) Save();
+        }
+
+        /// <summary>Deletes the save and starts a new game (used by settings).</summary>
+        public void ResetGame()
+        {
+            SaveStore.Delete();
+            LoadOrStartNew();
+            routeSelection.Hide();
+            rewardView.Hide();
+            upgradeShop.Hide();
+            Refresh();
+        }
+
+        [ContextMenu("Reset Save")]
+        private void ResetFromInspector()
+        {
+            if (Application.isPlaying) ResetGame();
+            else SaveStore.Delete();
+            Debug.Log($"Save reset: {SaveStore.FilePath}");
+        }
+
+        [ContextMenu("Log Save Path")]
+        private void LogSavePath() => Debug.Log(SaveStore.FilePath);
 
         private void Start()
         {
@@ -81,7 +133,7 @@ namespace SubmarineVoyage.UI
             var slot = Array.IndexOf(cards, card);
             if (!_fleet.IsUnlocked(slot))
             {
-                _fleet.TryUnlockNext(_wallet);
+                if (_fleet.TryUnlockNext(_wallet)) Save();
                 Refresh();
                 return;
             }
@@ -99,6 +151,7 @@ namespace SubmarineVoyage.UI
                     var reward = submarine.Collect(now, _random);
                     _wallet.Add(reward);
                     rewardView.Show(submarine.Name, routeName, reward);
+                    Save();
                     break;
             }
             Refresh();
@@ -115,7 +168,7 @@ namespace SubmarineVoyage.UI
         {
             var submarine = upgradeShop.Current;
             if (submarine == null) return;
-            submarine.TryUpgrade(type, _wallet);
+            if (submarine.TryUpgrade(type, _wallet)) Save();
             upgradeShop.Refresh(_wallet);
             Refresh();
         }
@@ -126,6 +179,7 @@ namespace SubmarineVoyage.UI
             var now = _clock.UtcNow;
             if (submarine.GetState(now) != SubmarineState.Idle) return;
             submarine.Depart(route, now, timeScale);
+            Save();
             Refresh();
         }
 

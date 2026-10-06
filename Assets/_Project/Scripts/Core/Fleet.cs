@@ -10,15 +10,32 @@ namespace SubmarineVoyage.Core
     {
         private static readonly int[] UnlockCosts = { 0, 500, 1500, 4000 };
 
+        public static int MaxSlots => UnlockCosts.Length;
+
+        public static string SlotName(int slot) => $"Submarine {slot + 1}";
+
         private readonly List<Submarine> _submarines = new List<Submarine>();
 
-        public int SlotCount => UnlockCosts.Length;
+        public int SlotCount => MaxSlots;
         public int UnlockedCount => _submarines.Count;
         public IReadOnlyList<Submarine> Submarines => _submarines;
 
         public Fleet()
         {
             AddSubmarine();
+        }
+
+        private Fleet(IEnumerable<Submarine> submarines)
+        {
+            _submarines.AddRange(submarines);
+            if (_submarines.Count == 0) AddSubmarine();
+        }
+
+        /// <summary>Rebuilds a fleet from saved submarines; slot 1 always exists.</summary>
+        public static Fleet Restore(IEnumerable<Submarine> submarines)
+        {
+            if (submarines == null) throw new ArgumentNullException(nameof(submarines));
+            return new Fleet(submarines);
         }
 
         public bool IsUnlocked(int slot) => slot >= 0 && slot < UnlockedCount;
@@ -43,6 +60,6 @@ namespace SubmarineVoyage.Core
             return true;
         }
 
-        private void AddSubmarine() => _submarines.Add(new Submarine($"Submarine {_submarines.Count + 1}"));
+        private void AddSubmarine() => _submarines.Add(new Submarine(SlotName(_submarines.Count)));
     }
 }

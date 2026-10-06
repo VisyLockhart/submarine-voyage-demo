@@ -21,6 +21,27 @@ namespace SubmarineVoyage.Core
             Name = name;
         }
 
+        /// <summary>Rebuilds a submarine from saved values. Pass a null route for an idle submarine.</summary>
+        public static Submarine Restore(string name, int cargoLevel, int speedLevel,
+            Route route, DateTime? departedAtUtc, DateTime? returnAtUtc)
+        {
+            if (cargoLevel < UpgradeRules.MinLevel || cargoLevel > UpgradeRules.MaxLevel)
+                throw new ArgumentOutOfRangeException(nameof(cargoLevel));
+            if (speedLevel < UpgradeRules.MinLevel || speedLevel > UpgradeRules.MaxLevel)
+                throw new ArgumentOutOfRangeException(nameof(speedLevel));
+            if (route != null && returnAtUtc == null)
+                throw new ArgumentException("A voyage needs a return time.", nameof(returnAtUtc));
+
+            return new Submarine(name)
+            {
+                CargoLevel = cargoLevel,
+                SpeedLevel = speedLevel,
+                CurrentRoute = route,
+                DepartedAtUtc = route == null ? null : departedAtUtc,
+                ReturnAtUtc = route == null ? null : returnAtUtc
+            };
+        }
+
         public SubmarineState GetState(DateTime nowUtc)
         {
             if (ReturnAtUtc == null) return SubmarineState.Idle;
