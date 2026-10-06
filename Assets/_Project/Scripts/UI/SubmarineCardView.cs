@@ -16,13 +16,16 @@ namespace SubmarineVoyage.UI
         [SerializeField] private TMP_Text countdownText;
         [SerializeField] private Button actionButton;
         [SerializeField] private TMP_Text actionButtonLabel;
+        [SerializeField] private Button upgradeButton;
 
         /// <summary>Raised with this card so one handler can serve every card.</summary>
         public event Action<SubmarineCardView> ActionClicked;
+        public event Action<SubmarineCardView> UpgradeClicked;
 
         private void Awake()
         {
             actionButton.onClick.AddListener(() => ActionClicked?.Invoke(this));
+            upgradeButton.onClick.AddListener(() => UpgradeClicked?.Invoke(this));
         }
 
         public void ShowLocked(int slotNumber, int unlockCost, bool isNextToUnlock, bool canAfford)
@@ -32,10 +35,12 @@ namespace SubmarineVoyage.UI
             countdownText.text = $"{unlockCost} G";
             actionButtonLabel.text = "Unlock";
             actionButton.interactable = isNextToUnlock && canAfford;
+            upgradeButton.gameObject.SetActive(false);
         }
 
         public void Refresh(Submarine submarine, DateTime nowUtc)
         {
+            upgradeButton.gameObject.SetActive(true);
             nameText.text = $"{submarine.Name}\nCargo Lv{submarine.CargoLevel} / Speed Lv{submarine.SpeedLevel}";
 
             switch (submarine.GetState(nowUtc))

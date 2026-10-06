@@ -17,6 +17,8 @@ namespace SubmarineVoyage.UI
         [SerializeField] private SubmarineCardView[] cards;
         [SerializeField] private TMP_Text walletText;
         [SerializeField] private RouteSelectionView routeSelection;
+        [SerializeField] private RewardView rewardView;
+        [SerializeField] private UpgradeShopView upgradeShop;
         [SerializeField] private RouteDefinition[] routes;
 
         [Tooltip("Game seconds per real second. 60 = 1 real second is 1 game minute.")]
@@ -44,16 +46,28 @@ namespace SubmarineVoyage.UI
         private void Start()
         {
             routeSelection.Hide();
+            rewardView.Hide();
+            upgradeShop.Hide();
         }
 
         private void OnEnable()
         {
-            foreach (var card in cards) card.ActionClicked += OnCardAction;
+            foreach (var card in cards)
+            {
+                card.ActionClicked += OnCardAction;
+                card.UpgradeClicked += OnCardUpgrade;
+            }
+            upgradeShop.UpgradeRequested += OnUpgradeRequested;
         }
 
         private void OnDisable()
         {
-            foreach (var card in cards) card.ActionClicked -= OnCardAction;
+            foreach (var card in cards)
+            {
+                card.ActionClicked -= OnCardAction;
+                card.UpgradeClicked -= OnCardUpgrade;
+            }
+            upgradeShop.UpgradeRequested -= OnUpgradeRequested;
         }
 
         private void Update()
@@ -80,9 +94,29 @@ namespace SubmarineVoyage.UI
                     routeSelection.Show(_routes, timeScale, route => Depart(submarine, route));
                     break;
                 case SubmarineState.ReadyToCollect:
-                    _wallet.Add(submarine.Collect(now, _random));
+                    // Read the route name first: collecting clears the current route.
+                    var routeName = submarine.CurrentRoute.DisplayName;
+                    var reward = submarine.Collect(now, _random);
+                    _wallet.Add(reward);
+                    rewardView.Show(submarine.Name, routeName, reward);
                     break;
             }
+            Refresh();
+        }
+
+        private void OnCardUpgrade(SubmarineCardView card)
+        {
+            var slot = Array.IndexOf(cards, card);
+            if (!_fleet.IsUnlocked(slot)) return;
+            upgradeShop.Show(_fleet.Submarines[slot], _wallet);
+        }
+
+        private void OnUpgradeRequested(UpgradeType type)
+        {
+            var submarine = upgradeShop.Current;
+            if (submarine == null) return;
+            submarine.TryUpgrade(type, _wallet);
+            upgradeShop.Refresh(_wallet);
             Refresh();
         }
 
