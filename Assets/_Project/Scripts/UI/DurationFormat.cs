@@ -15,11 +15,18 @@ namespace SubmarineVoyage.UI
             return minutes == 0 ? $"{hours} h" : $"{hours} h {minutes} min";
         }
 
-        /// <summary>Countdown as mm:ss, rounded up so it never shows 00:00 while time remains.</summary>
+        /// <summary>
+        /// Countdown as mm:ss, or h:mm:ss from one hour up. Rounded up so it never shows
+        /// 00:00 while time remains.
+        /// </summary>
         public static string Countdown(TimeSpan remaining)
         {
             var seconds = (int)Math.Ceiling(remaining.TotalSeconds);
-            return $"{seconds / 60:00}:{seconds % 60:00}";
+            var hours = seconds / 3600;
+            var minutes = seconds / 60 % 60;
+            return hours > 0
+                ? $"{hours}:{minutes:00}:{seconds % 60:00}"
+                : $"{minutes:00}:{seconds % 60:00}";
         }
     }
 }

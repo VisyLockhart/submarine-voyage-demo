@@ -15,6 +15,9 @@ namespace SubmarineVoyage.Core
         public int version = CurrentVersion;
         public int gold;
         public int materials;
+
+        /// <summary>0 in saves made before settings existed; restored as the default.</summary>
+        public double timeScale;
         public List<SubmarineSaveData> submarines = new List<SubmarineSaveData>();
     }
 

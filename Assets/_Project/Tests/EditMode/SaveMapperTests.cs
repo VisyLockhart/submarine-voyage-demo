@@ -23,7 +23,12 @@ namespace SubmarineVoyage.Core.Tests
             fleet.Submarines[0].TryUpgrade(UpgradeType.Cargo, wallet);     // 100 gold, 1 material
             fleet.Submarines[1].Depart(DeepSea, T0, 60);
 
-            var (restoredWallet, restoredFleet) = SaveMapper.Restore(SaveMapper.Capture(wallet, fleet), Routes);
+            var state = new GameState(wallet, fleet, timeScale: 600);
+            var restored = SaveMapper.Restore(SaveMapper.Capture(state), Routes);
+            var restoredWallet = restored.Wallet;
+            var restoredFleet = restored.Fleet;
+
+            Assert.AreEqual(600, restored.TimeScale);
 
             Assert.AreEqual(400, restoredWallet.Gold);
             Assert.AreEqual(4, restoredWallet.Materials);
@@ -43,9 +48,9 @@ namespace SubmarineVoyage.Core.Tests
         {
             var fleet = new Fleet();
             fleet.Submarines[0].Depart(NearSea, T0, 60);
-            var data = SaveMapper.Capture(new Wallet(), fleet);
+            var data = SaveMapper.Capture(new GameState(new Wallet(), fleet));
 
-            var (_, restored) = SaveMapper.Restore(data, Routes);
+            var restored = SaveMapper.Restore(data, Routes).Fleet;
 
             // Game reopened a day later.
             Assert.AreEqual(SubmarineState.ReadyToCollect, restored.Submarines[0].GetState(T0.AddDays(1)));
@@ -59,7 +64,7 @@ namespace SubmarineVoyage.Core.Tests
                 submarines = { new SubmarineSaveData { routeId = "removed", returnAtTicks = T0.Ticks } }
             };
 
-            var (_, fleet) = SaveMapper.Restore(data, Routes);
+            var fleet = SaveMapper.Restore(data, Routes).Fleet;
 
             Assert.AreEqual(SubmarineState.Idle, fleet.Submarines[0].GetState(T0));
             Assert.IsNull(fleet.Submarines[0].CurrentRoute);
@@ -72,7 +77,9 @@ namespace SubmarineVoyage.Core.Tests
             for (var i = 0; i < 6; i++)
                 data.submarines.Add(new SubmarineSaveData { cargoLevel = 99, speedLevel = 0 });
 
-            var (wallet, fleet) = SaveMapper.Restore(data, Routes);
+            var restored = SaveMapper.Restore(data, Routes);
+            var wallet = restored.Wallet;
+            var fleet = restored.Fleet;
 
             Assert.AreEqual(0, wallet.Gold);
             Assert.AreEqual(0, wallet.Materials);
@@ -84,8 +91,32 @@ namespace SubmarineVoyage.Core.Tests
         [Test]
         public void Restore_EmptySave_StartsWithOneSubmarine()
         {
-            var (_, fleet) = SaveMapper.Restore(new SaveData(), Routes);
-            Assert.AreEqual(1, fleet.UnlockedCount);
+            var restored = SaveMapper.Restore(new SaveData(), Routes);
+            Assert.AreEqual(1, restored.Fleet.UnlockedCount);
+        }
+
+        [Test]
+        public void Restore_MissingOrInvalidTimeScale_UsesDefault()
+        {
+            // Saves written before settings existed have timeScale = 0.
+            Assert.AreEqual(TimeScaleOptions.Default, SaveMapper.Restore(new SaveData(), Routes).TimeScale);
+            Assert.AreEqual(TimeScaleOptions.Default,
+                SaveMapper.Restore(new SaveData { timeScale = 7 }, Routes).TimeScale);
+        }
+    }
+
+    public class GameStateTests
+    {
+        [Test]
+        public void SetTimeScale_RejectsValuesNotInOptions()
+        {
+            var state = GameState.NewGame();
+            Assert.AreEqual(TimeScaleOptions.Default, state.TimeScale);
+
+            state.SetTimeScale(1);
+            Assert.AreEqual(1, state.TimeScale);
+            Assert.Throws<ArgumentOutOfRangeException>(() => state.SetTimeScale(30));
+            Assert.AreEqual(1, state.TimeScale);
         }
     }
 }
