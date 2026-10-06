@@ -21,12 +21,14 @@ namespace SubmarineVoyage.Core
             Materials += reward.Materials;
         }
 
-        public bool CanAfford(int gold) => gold >= 0 && Gold >= gold;
+        public bool CanAfford(int gold, int materials = 0) =>
+            gold >= 0 && materials >= 0 && Gold >= gold && Materials >= materials;
 
-        public bool TrySpend(int gold)
+        public bool TrySpend(int gold, int materials = 0)
         {
-            if (!CanAfford(gold)) return false;
+            if (!CanAfford(gold, materials)) return false;
             Gold -= gold;
+            Materials -= materials;
             return true;
         }
     }

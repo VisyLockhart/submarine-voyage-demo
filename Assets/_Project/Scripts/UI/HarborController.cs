@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using SubmarineVoyage.Core;
@@ -12,7 +13,8 @@ namespace SubmarineVoyage.UI
     /// </summary>
     public class HarborController : MonoBehaviour
     {
-        [SerializeField] private SubmarineCardView card;
+        [Tooltip("One card per fleet slot, in slot order.")]
+        [SerializeField] private SubmarineCardView[] cards;
         [SerializeField] private TMP_Text walletText;
         [SerializeField] private RouteSelectionView routeSelection;
         [SerializeField] private RouteDefinition[] routes;
@@ -20,15 +22,23 @@ namespace SubmarineVoyage.UI
         [Tooltip("Game seconds per real second. 60 = 1 real second is 1 game minute.")]
         [SerializeField] private float timeScale = 60f;
 
+        [Tooltip("Gold at game start. Raise it temporarily to test unlocks and upgrades.")]
+        [Min(0)] [SerializeField] private int startingGold;
+
+        [Min(0)] [SerializeField] private int startingMaterials;
+
         private readonly IClock _clock = new SystemClock();
         private readonly IRandomSource _random = new SystemRandomSource();
-        private readonly Wallet _wallet = new Wallet();
-        private readonly Submarine _submarine = new Submarine("Submarine 1");
+        private Wallet _wallet;
+        private readonly Fleet _fleet = new Fleet();
         private IReadOnlyList<Route> _routes;
 
         private void Awake()
         {
+            _wallet = new Wallet(startingGold, startingMaterials);
             _routes = routes.Select(r => r.ToRoute()).ToList();
+            if (cards.Length != _fleet.SlotCount)
+                Debug.LogError($"HarborController needs {_fleet.SlotCount} cards but has {cards.Length}.", this);
         }
 
         private void Start()
@@ -36,8 +46,15 @@ namespace SubmarineVoyage.UI
             routeSelection.Hide();
         }
 
-        private void OnEnable() => card.ActionClicked += OnCardAction;
-        private void OnDisable() => card.ActionClicked -= OnCardAction;
+        private void OnEnable()
+        {
+            foreach (var card in cards) card.ActionClicked += OnCardAction;
+        }
+
+        private void OnDisable()
+        {
+            foreach (var card in cards) card.ActionClicked -= OnCardAction;
+        }
 
         private void Update()
         {
@@ -45,33 +62,54 @@ namespace SubmarineVoyage.UI
             Refresh();
         }
 
-        private void OnCardAction()
+        private void OnCardAction(SubmarineCardView card)
         {
+            var slot = Array.IndexOf(cards, card);
+            if (!_fleet.IsUnlocked(slot))
+            {
+                _fleet.TryUnlockNext(_wallet);
+                Refresh();
+                return;
+            }
+
+            var submarine = _fleet.Submarines[slot];
             var now = _clock.UtcNow;
-            switch (_submarine.GetState(now))
+            switch (submarine.GetState(now))
             {
                 case SubmarineState.Idle:
-                    routeSelection.Show(_routes, timeScale, Depart);
+                    routeSelection.Show(_routes, timeScale, route => Depart(submarine, route));
                     break;
                 case SubmarineState.ReadyToCollect:
-                    _wallet.Add(_submarine.Collect(now, _random));
+                    _wallet.Add(submarine.Collect(now, _random));
                     break;
             }
             Refresh();
         }
 
-        private void Depart(Route route)
+        private void Depart(Submarine submarine, Route route)
         {
             // Re-check: the voyage starts when the route is picked, not when the dialog opened.
             var now = _clock.UtcNow;
-            if (_submarine.GetState(now) != SubmarineState.Idle) return;
-            _submarine.Depart(route, now, timeScale);
+            if (submarine.GetState(now) != SubmarineState.Idle) return;
+            submarine.Depart(route, now, timeScale);
             Refresh();
         }
 
         private void Refresh()
         {
-            card.Refresh(_submarine, _clock.UtcNow);
+            var now = _clock.UtcNow;
+            for (var slot = 0; slot < cards.Length; slot++)
+            {
+                if (_fleet.IsUnlocked(slot))
+                {
+                    cards[slot].Refresh(_fleet.Submarines[slot], now);
+                }
+                else
+                {
+                    var cost = _fleet.GetUnlockCost(slot);
+                    cards[slot].ShowLocked(slot + 1, cost, _fleet.IsNextToUnlock(slot), _wallet.CanAfford(cost));
+                }
+            }
             walletText.text = $"Gold {_wallet.Gold}   Materials {_wallet.Materials}";
         }
     }

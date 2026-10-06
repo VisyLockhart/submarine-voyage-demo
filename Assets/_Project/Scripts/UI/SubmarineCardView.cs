@@ -7,7 +7,7 @@ using UnityEngine.UI;
 namespace SubmarineVoyage.UI
 {
     /// <summary>
-    /// Displays one submarine and forwards the button click. Holds no game rules.
+    /// Displays one submarine slot (locked or unlocked) and forwards the button click. Holds no game rules.
     /// </summary>
     public class SubmarineCardView : MonoBehaviour
     {
@@ -17,16 +17,26 @@ namespace SubmarineVoyage.UI
         [SerializeField] private Button actionButton;
         [SerializeField] private TMP_Text actionButtonLabel;
 
-        public event Action ActionClicked;
+        /// <summary>Raised with this card so one handler can serve every card.</summary>
+        public event Action<SubmarineCardView> ActionClicked;
 
         private void Awake()
         {
-            actionButton.onClick.AddListener(() => ActionClicked?.Invoke());
+            actionButton.onClick.AddListener(() => ActionClicked?.Invoke(this));
+        }
+
+        public void ShowLocked(int slotNumber, int unlockCost, bool isNextToUnlock, bool canAfford)
+        {
+            nameText.text = $"Slot {slotNumber}";
+            stateText.text = isNextToUnlock ? "Locked" : $"Unlock slot {slotNumber - 1} first";
+            countdownText.text = $"{unlockCost} G";
+            actionButtonLabel.text = "Unlock";
+            actionButton.interactable = isNextToUnlock && canAfford;
         }
 
         public void Refresh(Submarine submarine, DateTime nowUtc)
         {
-            nameText.text = submarine.Name;
+            nameText.text = $"{submarine.Name}\nCargo Lv{submarine.CargoLevel} / Speed Lv{submarine.SpeedLevel}";
 
             switch (submarine.GetState(nowUtc))
             {
