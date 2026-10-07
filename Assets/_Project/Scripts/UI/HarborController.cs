@@ -17,8 +17,10 @@ namespace SubmarineVoyage.UI
         [Tooltip("One card per fleet slot, in slot order.")]
         [SerializeField] private SubmarineCardView[] cards;
         [SerializeField] private TMP_Text walletText;
+        [SerializeField] private TMP_Text goalText;
         [SerializeField] private RouteSelectionView routeSelection;
         [SerializeField] private RewardView rewardView;
+        [SerializeField] private CompletionView completionView;
         [SerializeField] private UpgradeShopView upgradeShop;
         [SerializeField] private SettingsView settings;
         [SerializeField] private Button settingsButton;
@@ -100,7 +102,7 @@ namespace SubmarineVoyage.UI
             var data = SaveStore.Load();
             _state = data != null
                 ? SaveMapper.Restore(data, _routes)
-                : GameState.NewGame(startingGold, startingMaterials);
+                : GameState.NewGame(startingGold, startingMaterials, _clock.UtcNow);
         }
 
         private void Save() => SaveStore.Save(SaveMapper.Capture(_state));
@@ -129,6 +131,7 @@ namespace SubmarineVoyage.UI
         {
             routeSelection.Hide();
             rewardView.Hide();
+            completionView.Hide();
             upgradeShop.Hide();
             settings.Hide();
         }
@@ -174,8 +177,17 @@ namespace SubmarineVoyage.UI
         {
             var submarine = upgradeShop.Current;
             if (submarine == null) return;
-            if (submarine.TryUpgrade(type, _state.Wallet)) Save();
-            upgradeShop.Refresh(_state.Wallet);
+            if (submarine.TryUpgrade(type, _state.Wallet))
+            {
+                // The last upgrade completes the goal: close the shop so the dialog is not hidden behind it.
+                if (_state.TryMarkCompleted(_clock.UtcNow))
+                {
+                    upgradeShop.Hide();
+                    completionView.Show(_state.PlayTimeToComplete);
+                }
+                Save();
+            }
+            if (upgradeShop.Current != null) upgradeShop.Refresh(_state.Wallet);
             Refresh();
         }
 
@@ -218,6 +230,9 @@ namespace SubmarineVoyage.UI
                 }
             }
             walletText.text = $"Gold {_state.Wallet.Gold}   Materials {_state.Wallet.Materials}";
+            goalText.text = _state.Fleet.IsComplete
+                ? $"Fleet complete! {Fleet.MaxTotalLevels}/{Fleet.MaxTotalLevels}"
+                : $"Goal: max out the fleet  Lv {_state.Fleet.TotalLevels}/{Fleet.MaxTotalLevels}";
         }
     }
 }

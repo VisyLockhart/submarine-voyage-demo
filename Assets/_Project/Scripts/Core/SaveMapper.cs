@@ -16,6 +16,8 @@ namespace SubmarineVoyage.Core
                 gold = state.Wallet.Gold,
                 materials = state.Wallet.Materials,
                 timeScale = state.TimeScale,
+                startedAtTicks = state.StartedAtUtc?.Ticks ?? 0,
+                completedAtTicks = state.CompletedAtUtc?.Ticks ?? 0,
                 submarines = state.Fleet.Submarines.Select(s => new SubmarineSaveData
                 {
                     cargoLevel = s.CargoLevel,
@@ -57,11 +59,14 @@ namespace SubmarineVoyage.Core
                     route == null ? (DateTime?)null : FromTicks(s.returnAtTicks)));
             }
 
-            return new GameState(wallet, Fleet.Restore(submarines), TimeScaleOptions.Normalize(data.timeScale));
+            return new GameState(wallet, Fleet.Restore(submarines), TimeScaleOptions.Normalize(data.timeScale),
+                OptionalTime(data.startedAtTicks), OptionalTime(data.completedAtTicks));
         }
 
         private static int ClampLevel(int level) =>
             Math.Min(UpgradeRules.MaxLevel, Math.Max(UpgradeRules.MinLevel, level));
+
+        private static DateTime? OptionalTime(long ticks) => ticks > 0 ? FromTicks(ticks) : (DateTime?)null;
 
         private static DateTime FromTicks(long ticks) =>
             new DateTime(Math.Min(Math.Max(ticks, DateTime.MinValue.Ticks), DateTime.MaxValue.Ticks), DateTimeKind.Utc);

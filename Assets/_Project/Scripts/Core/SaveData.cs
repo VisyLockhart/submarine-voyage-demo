@@ -18,6 +18,10 @@ namespace SubmarineVoyage.Core
 
         /// <summary>0 in saves made before settings existed; restored as the default.</summary>
         public double timeScale;
+
+        /// <summary>0 in saves made before the fleet goal existed.</summary>
+        public long startedAtTicks;
+        public long completedAtTicks;
         public List<SubmarineSaveData> submarines = new List<SubmarineSaveData>();
     }
 

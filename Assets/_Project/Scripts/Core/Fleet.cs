@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SubmarineVoyage.Core
 {
@@ -37,6 +38,14 @@ namespace SubmarineVoyage.Core
             if (submarines == null) throw new ArgumentNullException(nameof(submarines));
             return new Fleet(submarines);
         }
+
+        /// <summary>Goal target: every slot unlocked with both upgrades at max level.</summary>
+        public static int MaxTotalLevels => MaxSlots * 2 * UpgradeRules.MaxLevel;
+
+        /// <summary>Goal progress: cargo + speed levels of all unlocked submarines (locked slots count 0).</summary>
+        public int TotalLevels => _submarines.Sum(s => s.CargoLevel + s.SpeedLevel);
+
+        public bool IsComplete => TotalLevels >= MaxTotalLevels;
 
         public bool IsUnlocked(int slot) => slot >= 0 && slot < UnlockedCount;
 

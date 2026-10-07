@@ -118,5 +118,57 @@ namespace SubmarineVoyage.Core.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => state.SetTimeScale(30));
             Assert.AreEqual(1, state.TimeScale);
         }
+
+        private static readonly DateTime T0 = new DateTime(2026, 10, 6, 12, 0, 0, DateTimeKind.Utc);
+
+        private static GameState CompletedFleetGame()
+        {
+            var state = GameState.NewGame(gold: 1000000, materials: 1000, startedAtUtc: T0);
+            var fleet = state.Fleet;
+            while (fleet.TryUnlockNext(state.Wallet)) { }
+            foreach (var sub in fleet.Submarines)
+                for (var i = 1; i < UpgradeRules.MaxLevel; i++)
+                {
+                    sub.TryUpgrade(UpgradeType.Cargo, state.Wallet);
+                    sub.TryUpgrade(UpgradeType.Speed, state.Wallet);
+                }
+            return state;
+        }
+
+        [Test]
+        public void FleetGoal_CountsLevelsOfUnlockedSubmarines()
+        {
+            var state = GameState.NewGame();
+            Assert.AreEqual(2, state.Fleet.TotalLevels);   // one submarine at Lv1 / Lv1
+            Assert.AreEqual(40, Fleet.MaxTotalLevels);     // 4 submarines x 2 upgrades x Lv5
+            Assert.IsFalse(state.TryMarkCompleted(T0));
+        }
+
+        [Test]
+        public void TryMarkCompleted_FirstTimeOnly_AndRecordsPlayTime()
+        {
+            var state = CompletedFleetGame();
+            Assert.IsTrue(state.Fleet.IsComplete);
+
+            Assert.IsTrue(state.TryMarkCompleted(T0.AddMinutes(90)));
+            Assert.IsFalse(state.TryMarkCompleted(T0.AddMinutes(95)));
+            Assert.AreEqual(TimeSpan.FromMinutes(90), state.PlayTimeToComplete);
+        }
+
+        [Test]
+        public void CaptureThenRestore_KeepsGoalTimes_AndOldSavesHaveNone()
+        {
+            var state = CompletedFleetGame();
+            state.TryMarkCompleted(T0.AddMinutes(90));
+
+            var restored = SaveMapper.Restore(SaveMapper.Capture(state), new List<Route>());
+            Assert.AreEqual(T0, restored.StartedAtUtc);
+            Assert.AreEqual(T0.AddMinutes(90), restored.CompletedAtUtc);
+
+            var old = SaveMapper.Restore(new SaveData(), new List<Route>());
+            Assert.IsNull(old.StartedAtUtc);
+            Assert.IsNull(old.CompletedAtUtc);
+            Assert.IsNull(old.PlayTimeToComplete);
+        }
     }
 }
