@@ -149,7 +149,7 @@ namespace SubmarineVoyage.UI
             switch (submarine.GetState(now))
             {
                 case SubmarineState.Idle:
-                    routeSelection.Show(_routes, _state.TimeScale, route => Depart(submarine, route));
+                    routeSelection.Show(_routes, submarine, _state.TimeScale, route => Depart(submarine, route));
                     break;
                 case SubmarineState.ReadyToCollect:
                     // Read the route name first: collecting clears the current route.

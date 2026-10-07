@@ -22,8 +22,15 @@ namespace SubmarineVoyage.UI
         public event Action<SubmarineCardView> ActionClicked;
         public event Action<SubmarineCardView> UpgradeClicked;
 
+        // Found at runtime so the existing cards need no new Inspector field.
+        private TMP_Text _upgradeButtonLabel;
+        private string _upgradeButtonText;
+
         private void Awake()
         {
+            _upgradeButtonLabel = upgradeButton.GetComponentInChildren<TMP_Text>(true);
+            if (_upgradeButtonLabel != null) _upgradeButtonText = _upgradeButtonLabel.text;
+
             actionButton.onClick.AddListener(() => ActionClicked?.Invoke(this));
             upgradeButton.onClick.AddListener(() => UpgradeClicked?.Invoke(this));
         }
@@ -41,6 +48,9 @@ namespace SubmarineVoyage.UI
         public void Refresh(Submarine submarine, DateTime nowUtc)
         {
             upgradeButton.gameObject.SetActive(true);
+            upgradeButton.interactable = !submarine.IsFullyUpgraded;
+            if (_upgradeButtonLabel != null)
+                _upgradeButtonLabel.text = submarine.IsFullyUpgraded ? "MAX" : _upgradeButtonText;
             nameText.text = $"{submarine.Name}\nCargo Lv{submarine.CargoLevel} / Speed Lv{submarine.SpeedLevel}";
 
             switch (submarine.GetState(nowUtc))

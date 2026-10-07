@@ -95,9 +95,20 @@ namespace SubmarineVoyage.Core
             return reward;
         }
 
+        /// <summary>Smallest and largest reward this submarine can bring back, including its cargo upgrade.</summary>
+        public (Reward Min, Reward Max) GetRewardRange(Route route)
+        {
+            if (route == null) throw new ArgumentNullException(nameof(route));
+            var multiplier = UpgradeRules.CargoMultiplier(CargoLevel);
+            return (new Reward(Scale(route.MinGold, multiplier), Scale(route.MinMaterials, multiplier)),
+                    new Reward(Scale(route.MaxGold, multiplier), Scale(route.MaxMaterials, multiplier)));
+        }
+
         public int GetLevel(UpgradeType type) => type == UpgradeType.Cargo ? CargoLevel : SpeedLevel;
 
         public bool IsMaxLevel(UpgradeType type) => GetLevel(type) >= UpgradeRules.MaxLevel;
+
+        public bool IsFullyUpgraded => IsMaxLevel(UpgradeType.Cargo) && IsMaxLevel(UpgradeType.Speed);
 
         /// <summary>Spends the upgrade cost from the wallet. Returns false if maxed or not affordable.</summary>
         public bool TryUpgrade(UpgradeType type, Wallet wallet)

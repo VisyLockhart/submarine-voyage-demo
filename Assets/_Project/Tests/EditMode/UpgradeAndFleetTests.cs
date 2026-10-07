@@ -89,6 +89,32 @@ namespace SubmarineVoyage.Core.Tests
             Assert.AreEqual(540, reward.Gold);     // 450 x 1.2
             Assert.AreEqual(4, reward.Materials);  // 3 x 1.2 = 3.6 -> 4
         }
+
+        [Test]
+        public void GetRewardRange_IncludesCargoLevel()
+        {
+            var sub = new Submarine("Sub 1");
+            sub.TryUpgrade(UpgradeType.Cargo, new Wallet(gold: 100, materials: 1)); // level 2 = x1.2
+
+            var (min, max) = sub.GetRewardRange(DeepSea());
+
+            Assert.AreEqual(360, min.Gold);       // 300 x 1.2
+            Assert.AreEqual(1, min.Materials);    // 1 x 1.2 = 1.2 -> 1
+            Assert.AreEqual(540, max.Gold);
+            Assert.AreEqual(4, max.Materials);
+        }
+
+        [Test]
+        public void IsFullyUpgraded_OnlyWhenBothUpgradesAreMax()
+        {
+            var sub = new Submarine("Sub 1");
+            var wallet = new Wallet(gold: 100000, materials: 100);
+            for (var i = 0; i < 4; i++) sub.TryUpgrade(UpgradeType.Cargo, wallet);
+            Assert.IsFalse(sub.IsFullyUpgraded);
+
+            for (var i = 0; i < 4; i++) sub.TryUpgrade(UpgradeType.Speed, wallet);
+            Assert.IsTrue(sub.IsFullyUpgraded);
+        }
     }
 
     public class FleetTests

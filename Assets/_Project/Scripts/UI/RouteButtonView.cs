@@ -12,12 +12,14 @@ namespace SubmarineVoyage.UI
         [SerializeField] private Button button;
         [SerializeField] private TMP_Text label;
 
-        public void Bind(Route route, double timeScale, Action<Route> onSelected)
+        /// <summary>Shows the route as this submarine would sail it, with its speed and cargo upgrades.</summary>
+        public void Bind(Route route, Submarine submarine, double timeScale, Action<Route> onSelected)
         {
             var gameTime = DurationFormat.Short(route.GameDuration);
-            var realTime = DurationFormat.Short(route.GetRealDuration(timeScale));
+            var realTime = DurationFormat.Short(submarine.GetVoyageDuration(route, timeScale));
+            var (min, max) = submarine.GetRewardRange(route);
             label.text = $"{route.DisplayName}   {gameTime} (wait {realTime})\n" +
-                         $"Gold {route.MinGold}-{route.MaxGold}   Materials {route.MinMaterials}-{route.MaxMaterials}";
+                         $"Gold {min.Gold}-{max.Gold}   Materials {min.Materials}-{max.Materials}";
 
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(() => onSelected(route));

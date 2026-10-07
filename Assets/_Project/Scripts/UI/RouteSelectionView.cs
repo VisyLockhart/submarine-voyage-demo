@@ -24,7 +24,7 @@ namespace SubmarineVoyage.UI
             cancelButton.onClick.AddListener(Hide);
         }
 
-        public void Show(IReadOnlyList<Route> routes, double timeScale, Action<Route> onSelected)
+        public void Show(IReadOnlyList<Route> routes, Submarine submarine, double timeScale, Action<Route> onSelected)
         {
             _onSelected = onSelected;
 
@@ -36,7 +36,7 @@ namespace SubmarineVoyage.UI
             {
                 var visible = i < routes.Count;
                 _buttons[i].gameObject.SetActive(visible);
-                if (visible) _buttons[i].Bind(routes[i], timeScale, Select);
+                if (visible) _buttons[i].Bind(routes[i], submarine, timeScale, Select);
             }
 
             gameObject.SetActive(true);
